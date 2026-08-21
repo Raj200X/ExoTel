@@ -1,0 +1,104 @@
+{
+  "domain": "cheque_bounce",
+  "jurisdiction": "central",
+  "description": "Routing targets for cheque bounce (NI Act §138) cases. Magistrate courts for §138 complaints; DLSA for legal aid.",
+  "targets": {
+    "magistrate_court_138": {
+      "national": {
+        "authority_name": "Magistrate Court (jurisdiction based on bank branch location)",
+        "authority_type": "Judicial",
+        "what_to_bring": [
+          "Original bounced cheque",
+          "Bank return memo / cheque return slip",
+          "Copy of demand notice sent under §138",
+          "Postal receipt / courier receipt of notice delivery",
+          "Acknowledgement of notice receipt (if available)",
+          "Copy of the underlying transaction (invoice, agreement, etc.)",
+          "Bank statement showing cheque deposit and return",
+          "ID proof (Aadhaar / PAN)"
+        ],
+        "filing_fee": "Court fees vary by state, typically ₹200-500 for §138 complaint",
+        "deadline_note": "Complaint must be filed within 30 days of expiry of the 15-day notice period (total ~45 days from notice). Court can condone delay up to an additional 30 days for sufficient cause."
+      },
+      "maharashtra": {
+        "authority_name": "Metropolitan Magistrate / Judicial Magistrate First Class",
+        "authority_type": "Judicial",
+        "portal_url": "https://districts.ecourts.gov.in/maharashtra",
+        "what_to_bring": [
+          "Original bounced cheque",
+          "Bank return memo",
+          "Copy of §138 demand notice with postal proof",
+          "Underlying transaction documents",
+          "Bank statement",
+          "ID proof"
+        ],
+        "filing_fee": "₹200 court fee stamp for §138 complaint in Maharashtra"
+      },
+      "uttar_pradesh": {
+        "authority_name": "Judicial Magistrate First Class",
+        "authority_type": "Judicial",
+        "portal_url": "https://districts.ecourts.gov.in/uttar-pradesh",
+        "what_to_bring": [
+          "Original bounced cheque",
+          "Bank return memo",
+          "Copy of §138 demand notice with postal proof",
+          "Underlying transaction documents",
+          "Bank statement",
+          "ID proof"
+        ],
+        "filing_fee": "₹200 court fee for §138 complaint in UP"
+      },
+      "karnataka": {
+        "authority_name": "Metropolitan Magistrate / Judicial Magistrate First Class",
+        "authority_type": "Judicial",
+        "portal_url": "https://districts.ecourts.gov.in/karnataka",
+        "what_to_bring": [
+          "Original bounced cheque",
+          "Bank return memo",
+          "Copy of §138 demand notice with postal proof",
+          "Underlying transaction documents",
+          "Bank statement",
+          "ID proof"
+        ],
+        "filing_fee": "₹500 court fee for §138 complaint in Karnataka"
+      }
+    },
+    "legal_aid_dlsa": {
+      "national": {
+        "authority_name": "District Legal Services Authority (DLSA)",
+        "authority_type": "Legal Aid",
+        "phone": "15100",
+        "portal_url": "https://nalsa.gov.in/lsam/",
+        "what_to_bring": [
+          "Income certificate (if applying for free legal aid)",
+          "All documents related to the cheque bounce case",
+          "ID proof"
+        ],
+        "deadline_note": "Free legal aid available for persons with annual income below ₹3 lakh (varies by state). No deadline to apply."
+      }
+    },
+    "generic_lawyer": {
+      "national": {
+        "authority_name": "Bar Council registered advocate (civil/criminal practice)",
+        "authority_type": "Private Legal Services",
+        "portal_url": "https://www.barcouncilofindia.org/",
+        "what_to_bring": [
+          "All cheque-related documents",
+          "Any correspondence with the other party",
+          "Timeline of events"
+        ]
+      }
+    },
+    "criminal_lawyer": {
+      "national": {
+        "authority_name": "Criminal defense advocate",
+        "authority_type": "Private Legal Services",
+        "what_to_bring": [
+          "All documents related to the case",
+          "Any notices or summons received",
+          "FIR copy (if filed)"
+        ]
+      }
+    }
+  }
+}
