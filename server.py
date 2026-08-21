@@ -1,24 +1,22 @@
 """
-meta-NFS Live Voice Server (Exotel Webhook + Sarvam AI Speech + Scope Gate Triage)
-
-Runs a FastAPI web server handling live incoming phone calls from Exotel.
+meta-NFS Live Voice & Web Server (Localhost Test Interface + Exotel Webhook + Sarvam AI Speech)
 
 Endpoints:
-  - GET/POST /exotel/incoming   : Initial call ingress webhook from Exotel
-  - GET/POST /exotel/process    : Conversational turn webhook (caller input -> triage -> Sarvam TTS)
-  - GET /audio/{audio_id}.mp3   : Serves generated Sarvam AI speech audio files to Exotel
+  - GET /                       : Web browser interface for interactive localhost testing (audio + UI)
   - GET /health                 : Server status check
+  - GET/POST /exotel/incoming   : Initial call ingress webhook from Exotel
+  - GET/POST /exotel/process    : Conversational turn webhook
+  - GET /audio/{filename}       : Serves generated Sarvam AI speech audio files
 """
 
 import os
 import base64
 from pathlib import Path
-from typing import Dict
 
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 
 load_dotenv()
@@ -31,7 +29,6 @@ from metanfs.scope_gate.engine import ScopeGateEngine
 
 app = FastAPI(title="meta-NFS Voice Server", version="0.1.0")
 
-# Audio storage directory for generated Sarvam TTS files
 AUDIO_DIR = Path("data/audio_cache")
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -95,7 +92,7 @@ class SimpleFastModel:
         fact.overall_confidence = 0.85
         return FastModelOutput(
             updated_triage_fact=fact,
-            response_candidate="I understand your cheque bounce query.",
+            response_candidate="I understand your legal question.",
             needs_retrieval=False,
         )
 
@@ -116,7 +113,7 @@ async def generate_sarvam_tts(text: str, filename: str) -> Path | None:
     url = "https://api.sarvam.ai/text-to-speech"
     headers = {"api-subscription-key": key, "Content-Type": "application/json"}
     payload = {
-        "inputs": [text[:500]],  # Cap for prompt length
+        "inputs": [text[:500]],
         "target_language_code": "hi-IN",
         "speaker": "anushka",
         "pitch": 0,
@@ -146,6 +143,215 @@ def health():
     return {"status": "online", "system": "meta-NFS Voice Server"}
 
 
+class TestTurnPayload(BaseModel):
+    session_id: str = "localhost-session"
+    text: str
+
+
+@app.post("/api/test_turn")
+async def api_test_turn(payload: TestTurnPayload):
+    """Localhost API endpoint for interactive web browser testing."""
+    utterance = Utterance(session_id=payload.session_id, text=payload.text)
+    result = await conversation_manager.process_utterance(utterance)
+
+    audio_filename = f"{payload.session_id}_turn_{len(result.session.turn_history)}.wav"
+    audio_path = await generate_sarvam_tts(result.response_text, audio_filename)
+
+    audio_url = f"/audio/{audio_filename}" if audio_path else None
+
+    return {
+        "action": result.scope_gate_decision.action,
+        "rule_id": result.scope_gate_decision.rule_id,
+        "reason": result.scope_gate_decision.reason,
+        "response_text": result.response_text,
+        "audio_url": audio_url,
+        "is_final": result.is_final,
+        "triage_fact": result.session.triage_fact.model_dump(),
+    }
+
+
+@app.get("/", response_class=HTMLResponse)
+def index():
+    """Beautiful Localhost Testing Web Interface."""
+    return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>meta-NFS — Localhost Voice Triage Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        p.subtitle { color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.5rem; }
+        .chat-box {
+            background: #090d16;
+            border-radius: 12px;
+            padding: 1rem;
+            height: 350px;
+            overflow-y: auto;
+            border: 1px solid #1e293b;
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .message {
+            padding: 0.8rem 1.2rem;
+            border-radius: 14px;
+            max-width: 85%;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .user-msg {
+            background: #312e81;
+            color: #e0e7ff;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        .ai-msg {
+            background: #1e293b;
+            color: #f1f5f9;
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            border: 1px solid #334155;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+        .badge-proceed { background: #065f46; color: #34d399; }
+        .badge-clarify { background: #854d0e; color: #fde047; }
+        .badge-hardstop { background: #991b1b; color: #fca5a5; }
+        .badge-softstop { background: #9a3412; color: #fdba74; }
+        
+        .input-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+        input[type="text"] {
+            flex: 1;
+            background: #090d16;
+            border: 1px solid #334155;
+            padding: 0.8rem 1.2rem;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+        }
+        input[type="text"]:focus { border-color: #6366f1; }
+        button {
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        audio { width: 100%; margin-top: 6px; height: 32px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>meta-NFS Localhost Test</h1>
+        <p class="subtitle">Simulate phone calls live on localhost. Scope Gate + Sarvam AI Hindi Speech active.</p>
+
+        <div class="chat-box" id="chatBox">
+            <div class="message ai-msg">
+                <span class="badge badge-proceed">System Ready</span><br>
+                नमस्ते! meta-NFS Legal Triage line में आपका स्वागत है। कृपया अपनी समस्या बताएं।
+            </div>
+        </div>
+
+        <div class="input-row">
+            <input type="text" id="userInput" placeholder="Type your situation (e.g. A cheque for 50000 bounced...)" onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()">Send & Listen</button>
+        </div>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML += `<div class="message user-msg">${text}</div>`;
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const res = await fetch('/api/test_turn', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: 'browser-test', text: text })
+                });
+
+                const data = await res.json();
+                let badgeClass = 'badge-proceed';
+                if (data.action === 'clarify') badgeClass = 'badge-clarify';
+                if (data.action === 'hard_stop') badgeClass = 'badge-hardstop';
+                if (data.action === 'soft_stop') badgeClass = 'badge-softstop';
+
+                let audioHtml = '';
+                if (data.audio_url) {
+                    audioHtml = `<audio controls autoplay src="${data.audio_url}"></audio>`;
+                }
+
+                chatBox.innerHTML += `
+                    <div class="message ai-msg">
+                        <span class="badge ${badgeClass}">${data.action} | Rule: ${data.rule_id}</span><br>
+                        ${data.response_text}
+                        ${audioHtml}
+                    </div>
+                `;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>
+"""
+
+
 @app.api_route("/exotel/incoming", methods=["GET", "POST"])
 async def exotel_incoming(request: Request):
     """Exotel Passthru Applet - Incoming call handler."""
@@ -154,18 +360,15 @@ async def exotel_incoming(request: Request):
     caller_phone = params.get("From", "Unknown")
 
     print(f"\n📞 INCOMING CALL from {caller_phone} (CallSid: {call_sid})")
-    session = conversation_manager.create_session(call_sid)
+    conversation_manager.create_session(call_sid)
 
-    # Initial Greeting Prompt
     greeting = (
         "नमस्ते! meta-NFS Legal Triage line में आपका स्वागत है। "
         "कृपया अपनी कानूनी समस्या का विवरण दें।"
     )
 
-    # Convert greeting to speech via Sarvam
-    audio_path = await generate_sarvam_tts(greeting, f"{call_sid}_greeting.wav")
+    await generate_sarvam_tts(greeting, f"{call_sid}_greeting.wav")
 
-    # Exotel Passthru Response format
     response_body = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say>{greeting}</Say>
@@ -175,7 +378,7 @@ async def exotel_incoming(request: Request):
 
 @app.api_route("/exotel/process", methods=["GET", "POST"])
 async def exotel_process(request: Request):
-    """Exotel Applet turn processor - processes caller speech & returns AI triage response."""
+    """Exotel Applet turn processor."""
     params = dict(request.query_params)
     call_sid = params.get("CallSid", "default_call")
     caller_speech = params.get("digits") or params.get("Speech", "") or params.get("digits_typed", "")
@@ -188,7 +391,6 @@ async def exotel_process(request: Request):
 
     ai_response = result.response_text
 
-    # Generate Sarvam TTS Audio for response
     audio_filename = f"{call_sid}_turn_{len(result.session.turn_history)}.wav"
     await generate_sarvam_tts(ai_response, audio_filename)
 
