@@ -623,6 +623,10 @@
             display: flex; gap: 24px; margin-top: 6px;
             font-size: 13px; color: var(--text-secondary);
         }
+        @keyframes msg-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -695,6 +699,11 @@
                         <div id="webCallSubtext" style="font-size: 15px; color: var(--text-muted); transition: all 0.3s;">
                             Tap to start conversation
                         </div>
+                    </div>
+                    
+                    <!-- Live Transcript Log -->
+                    <div id="webCallTranscript" style="margin-top: 32px; width: 100%; max-width: 500px; height: 180px; overflow-y: auto; background: rgba(0,0,0,0.1); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.05); font-size: 14px; line-height: 1.6; display: flex; flex-direction: column; gap: 12px; position: relative; z-index: 10; scroll-behavior: smooth;">
+                        <div style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: auto; margin-bottom: auto;">Live transcript will appear here</div>
                     </div>
 
                 </div>
@@ -1436,6 +1445,33 @@
                         micBtn.style.borderColor = "var(--success)";
                         visualizer.style.opacity = "0.5";
                     }
+                }
+                else if (msg.event === 'transcript') {
+                    const tbox = document.getElementById('webCallTranscript');
+                    if (tbox.innerHTML.includes("Live transcript will appear here")) {
+                        tbox.innerHTML = "";
+                    }
+                    
+                    const bubble = document.createElement('div');
+                    bubble.style.padding = "12px 16px";
+                    bubble.style.borderRadius = "12px";
+                    bubble.style.maxWidth = "85%";
+                    bubble.style.animation = "msg-in 0.3s ease-out";
+                    
+                    if (msg.role === 'user') {
+                        bubble.style.alignSelf = "flex-end";
+                        bubble.style.background = "rgba(255,255,255,0.08)";
+                        bubble.style.borderBottomRightRadius = "4px";
+                        bubble.innerHTML = `<div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; font-weight: 600;">You</div><div>${msg.text}</div>`;
+                    } else {
+                        bubble.style.alignSelf = "flex-start";
+                        bubble.style.background = "rgba(99, 102, 241, 0.12)";
+                        bubble.style.borderBottomLeftRadius = "4px";
+                        bubble.innerHTML = `<div style="font-size: 11px; color: var(--accent-primary-light); margin-bottom: 4px; text-transform: uppercase; font-weight: 600;">Saarthi</div><div>${msg.text}</div>`;
+                    }
+                    
+                    tbox.appendChild(bubble);
+                    tbox.scrollTop = tbox.scrollHeight;
                 }
                 else if (msg.event === 'media' && msg.media && msg.media.payload) {
                     statusText.textContent = "SAARTHI SPEAKING";

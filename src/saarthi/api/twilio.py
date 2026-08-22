@@ -342,7 +342,7 @@ async def _stt(audio_pcm: bytes) -> str:
                 files={"file": ("audio.wav", wav_bytes, "audio/wav")},
                 data={
                     "language_code": "hi-IN",
-                    "model": "saarika:v2",
+                    "model": "saarika:v2.5",
                     "with_timestamps": "false",
                 },
             )

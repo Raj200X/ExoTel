@@ -138,8 +138,17 @@ async def _process_turn(websocket: WebSocket, session: dict[str, Any], audio_dat
             return
 
         session["turns"].append({"role": "user", "content": user_text, "time": datetime.utcnow().isoformat()})
+        try:
+            await websocket.send_text(json.dumps({"event": "transcript", "role": "user", "text": user_text}))
+        except Exception:
+            pass
+            
         ai_response = await _generate_gemini_response(session)
         session["turns"].append({"role": "assistant", "content": ai_response, "time": datetime.utcnow().isoformat()})
+        try:
+            await websocket.send_text(json.dumps({"event": "transcript", "role": "assistant", "text": ai_response}))
+        except Exception:
+            pass
 
         pcm = await _tts(ai_response)
         if pcm:
@@ -215,10 +224,12 @@ async def _stt(pcm: bytes) -> str:
                 "https://api.sarvam.ai/speech-to-text",
                 headers={"api-subscription-key": sarvam_key},
                 files={"file": ("audio.wav", wav, "audio/wav")},
-                data={"language_code": "hi-IN", "model": "saarika:v2", "with_timestamps": "false"}
+                data={"language_code": "hi-IN", "model": "saarika:v2.5", "with_timestamps": "false"}
             )
             if res.status_code == 200:
                 return res.json().get("transcript", "")
+            else:
+                logger.error("STT API 400 Error: %s", res.text)
     except Exception as e:
         logger.error("STT error: %s", e)
     return ""
