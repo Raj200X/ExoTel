@@ -662,31 +662,41 @@
         <!-- Main Content -->
         <main class="main-content">
             <!-- Web Call Interface -->
-            <div id="page-webcall" class="page">
-                <div class="page-header" style="text-align: center; margin-top: 40px; margin-bottom: 60px;">
-                    <h2 style="font-size: 32px;">Saarthi Web Dialer</h2>
-                    <p style="font-size: 16px;">Talk to the AI directly from your browser.</p>
+            <div id="page-webcall" class="page" style="height: calc(100vh - 40px); display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at center, rgba(99, 102, 241, 0.03) 0%, transparent 70%);">
+                
+                <div style="text-align: center; margin-bottom: 60px;">
+                    <div style="display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 12px; background: rgba(99, 102, 241, 0.1); margin-bottom: 24px;">
+                        <span style="font-size: 24px;">✨</span>
+                    </div>
+                    <h2 style="font-size: 40px; font-weight: 700; letter-spacing: -1px; margin-bottom: 12px; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Saarthi AI Voice</h2>
+                    <p style="font-size: 16px; color: var(--text-secondary); max-width: 400px; line-height: 1.6; margin: 0 auto;">Experience seamless, real-time voice guidance directly in your browser without any telecom networks.</p>
                 </div>
 
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-card); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 20px 40px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.05) inset; padding: 60px 80px; border-radius: 32px; backdrop-filter: blur(20px);">
                     
+                    <!-- Sound Wave visualizer (Fake CSS based) -->
+                    <div id="webCallVisualizer" style="position: absolute; width: 100%; height: 100%; border-radius: 32px; top: 0; left: 0; pointer-events: none; opacity: 0; transition: opacity 0.5s ease; background: radial-gradient(circle at center, rgba(99,102,241,0.15) 0%, transparent 60%);"></div>
+
                     <!-- Pulsing Mic Button -->
-                    <div id="webCallMic" onclick="toggleWebCall()" style="width: 140px; height: 140px; border-radius: 50%; background: var(--bg-card); border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 64px; cursor: pointer; transition: all 0.3s ease; box-shadow: var(--shadow-lg); position: relative; z-index: 10;">
-                        🎙️
+                    <div id="webCallMic" onclick="toggleWebCall()" style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; z-index: 10;">
+                        <div style="position: absolute; inset: 0; border-radius: 50%; background: var(--accent-gradient); opacity: 0; transition: opacity 0.3s;" id="webCallMicBg"></div>
+                        <svg id="webCallMicIcon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-primary); position: relative; z-index: 2; transition: color 0.3s;">
+                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="22"></line>
+                        </svg>
                     </div>
                     
                     <!-- Status Text -->
-                    <div id="webCallStatus" style="margin-top: 40px; font-size: 20px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px;">
-                        Ready to Connect
-                    </div>
-                    <div id="webCallSubtext" style="margin-top: 8px; font-size: 14px; color: var(--text-muted);">
-                        Click the microphone to start
+                    <div style="margin-top: 40px; text-align: center; position: relative; z-index: 10;">
+                        <div id="webCallStatus" style="font-size: 14px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 8px; transition: color 0.3s;">
+                            Ready
+                        </div>
+                        <div id="webCallSubtext" style="font-size: 15px; color: var(--text-muted); transition: all 0.3s;">
+                            Tap to start conversation
+                        </div>
                     </div>
 
-                    <!-- End Call Button (Hidden initially) -->
-                    <button id="webCallEndBtn" onclick="stopWebCall()" style="display: none; margin-top: 40px; padding: 12px 32px; background: var(--danger); color: white; border: none; border-radius: var(--radius-md); font-weight: 600; cursor: pointer; font-size: 16px; transition: opacity 0.2s;">
-                        End Call
-                    </button>
                 </div>
             </div>
             <!-- Dashboard Page -->
@@ -1343,12 +1353,14 @@
         if (webCallSocket) return;
 
         const micBtn = document.getElementById('webCallMic');
+        const micBg = document.getElementById('webCallMicBg');
+        const micIcon = document.getElementById('webCallMicIcon');
         const statusText = document.getElementById('webCallStatus');
         const subtext = document.getElementById('webCallSubtext');
-        const endBtn = document.getElementById('webCallEndBtn');
+        const visualizer = document.getElementById('webCallVisualizer');
 
         try {
-            statusText.textContent = "Connecting...";
+            statusText.textContent = "CONNECTING...";
             subtext.textContent = "Requesting microphone access...";
             
             mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1360,13 +1372,18 @@
 
             webCallSocket.onopen = () => {
                 console.log("Browser WebSocket Connected");
-                statusText.textContent = "Listening";
+                statusText.textContent = "LISTENING";
                 statusText.style.color = "var(--success)";
                 subtext.textContent = "Speak into your microphone";
                 
-                micBtn.style.animation = "pulse-dot 1.5s infinite";
+                micBtn.style.animation = "pulse-dot 2s infinite";
+                micBg.style.opacity = "0.2";
+                micBg.style.background = "var(--success)";
                 micBtn.style.borderColor = "var(--success)";
-                endBtn.style.display = "block";
+                visualizer.style.opacity = "0.5";
+                
+                // Initialize a small ping message to ensure the socket is warm
+                webCallSocket.send(JSON.stringify({ event: "ping" }));
                 
                 const source = audioContext.createMediaStreamSource(mediaStream);
                 const processor = audioContext.createScriptProcessor(4096, 1, 1);
@@ -1403,22 +1420,33 @@
                 
                 if (msg.event === 'status') {
                     if (msg.status === 'processing') {
-                        statusText.textContent = "AI Thinking...";
+                        statusText.textContent = "ANALYZING...";
                         statusText.style.color = "var(--warning)";
-                        micBtn.style.animation = "pulse-dot 0.5s infinite";
+                        subtext.textContent = "Saarthi is thinking";
+                        micBtn.style.animation = "pulse-dot 0.8s infinite";
+                        micBg.style.background = "var(--warning)";
                         micBtn.style.borderColor = "var(--warning)";
+                        visualizer.style.opacity = "0";
                     } else if (msg.status === 'listening') {
-                        statusText.textContent = "Listening";
+                        statusText.textContent = "LISTENING";
                         statusText.style.color = "var(--success)";
-                        micBtn.style.animation = "pulse-dot 1.5s infinite";
+                        subtext.textContent = "Speak into your microphone";
+                        micBtn.style.animation = "pulse-dot 2s infinite";
+                        micBg.style.background = "var(--success)";
                         micBtn.style.borderColor = "var(--success)";
+                        visualizer.style.opacity = "0.5";
                     }
                 }
                 else if (msg.event === 'media' && msg.media && msg.media.payload) {
-                    statusText.textContent = "AI Speaking";
+                    statusText.textContent = "SAARTHI SPEAKING";
                     statusText.style.color = "var(--accent-primary)";
-                    micBtn.style.animation = "pulse-dot 0.8s infinite";
+                    subtext.textContent = "Listen to the response";
+                    micBtn.style.animation = "pulse-dot 0.5s infinite";
+                    micBg.style.background = "var(--accent-gradient)";
+                    micBg.style.opacity = "0.8";
                     micBtn.style.borderColor = "var(--accent-primary)";
+                    micIcon.style.color = "white";
+                    visualizer.style.opacity = "1";
                     
                     const binaryStr = window.atob(msg.media.payload);
                     const bytes = new Uint8Array(binaryStr.length);
@@ -1439,10 +1467,15 @@
                     source.connect(audioContext.destination);
                     
                     source.onended = () => {
-                        statusText.textContent = "Listening";
+                        statusText.textContent = "LISTENING";
                         statusText.style.color = "var(--success)";
-                        micBtn.style.animation = "pulse-dot 1.5s infinite";
+                        subtext.textContent = "Speak into your microphone";
+                        micBtn.style.animation = "pulse-dot 2s infinite";
+                        micBg.style.background = "var(--success)";
+                        micBg.style.opacity = "0.2";
                         micBtn.style.borderColor = "var(--success)";
+                        micIcon.style.color = "var(--text-primary)";
+                        visualizer.style.opacity = "0.5";
                     };
                     
                     source.start();
@@ -1452,9 +1485,10 @@
             webCallSocket.onclose = () => stopWebCall();
             
         } catch (e) {
-            statusText.textContent = "Microphone Error";
+            statusText.textContent = "MICROPHONE ERROR";
             statusText.style.color = "var(--danger)";
             subtext.textContent = e.message;
+            micBtn.style.borderColor = "var(--danger)";
         }
     }
 
@@ -1464,20 +1498,30 @@
         if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
         
         const micBtn = document.getElementById('webCallMic');
+        const micBg = document.getElementById('webCallMicBg');
+        const micIcon = document.getElementById('webCallMicIcon');
         const statusText = document.getElementById('webCallStatus');
         const subtext = document.getElementById('webCallSubtext');
-        const endBtn = document.getElementById('webCallEndBtn');
+        const visualizer = document.getElementById('webCallVisualizer');
         
         if (micBtn) {
             micBtn.style.animation = "none";
-            micBtn.style.borderColor = "var(--border-color)";
+            micBtn.style.borderColor = "rgba(255,255,255,0.1)";
+            micBtn.style.transform = "scale(1)";
+        }
+        if (micBg) {
+            micBg.style.opacity = "0";
+            micBg.style.background = "var(--accent-gradient)";
+        }
+        if (micIcon) {
+            micIcon.style.color = "var(--text-primary)";
         }
         if (statusText) {
-            statusText.textContent = "Call Ended";
+            statusText.textContent = "CALL ENDED";
             statusText.style.color = "var(--text-secondary)";
         }
-        if (subtext) subtext.textContent = "Click the microphone to start again";
-        if (endBtn) endBtn.style.display = "none";
+        if (subtext) subtext.textContent = "Tap microphone to restart";
+        if (visualizer) visualizer.style.opacity = "0";
         
         console.log("Web Call Ended.");
     }
