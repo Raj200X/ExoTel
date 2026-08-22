@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saarthi — Dashboard</title>
+    <meta name="description" content="Saarthi operations dashboard — monitor AI-powered phone guidance calls, track caller history, and review conversation analysis.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ================================================================
+           DESIGN SYSTEM
+           ================================================================ */
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: rgba(17, 24, 39, 0.8);
+            --bg-card-hover: rgba(30, 41, 59, 0.9);
+            --bg-input: rgba(255, 255, 255, 0.05);
+
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-active: rgba(99, 102, 241, 0.5);
+
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+
+            --accent-primary: #6366f1;
+            --accent-primary-light: #818cf8;
+            --accent-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
+
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.12);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.12);
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.12);
+            --info: #3b82f6;
+            --info-bg: rgba(59, 130, 246, 0.12);
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+            --shadow-lg: 0 12px 40px rgba(0,0,0,0.5);
+
+            --transition: all 0.2s ease;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ================================================================
+           LAYOUT
+           ================================================================ */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-brand h1 {
+            font-size: 20px;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .sidebar-brand p {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar-nav {
+            padding: 12px 12px;
+            flex: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 2px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-primary-light);
+        }
+
+        .nav-icon { font-size: 18px; width: 24px; text-align: center; }
+
+        .sidebar-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .phone-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: var(--success-bg);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            color: var(--success);
+            font-weight: 500;
+        }
+
+        .phone-badge .dot {
+            width: 8px; height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Main content */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 24px 32px;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .page-header p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* ================================================================
+           COMPONENTS
+           ================================================================ */
+
+        /* Stats cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-active);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        .stat-card.danger .stat-value { color: var(--danger); }
+        .stat-card.success .stat-value { color: var(--success); }
+        .stat-card.warning .stat-value { color: var(--warning); }
+        .stat-card.info .stat-value { color: var(--info); }
+
+        /* Tables */
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 20px;
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(0,0,0,0.15);
+        }
+
+        td {
+            padding: 14px 20px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:last-child td { border-bottom: none; }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .clickable-row { cursor: pointer; }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .badge-low { background: var(--success-bg); color: var(--success); }
+        .badge-medium { background: var(--warning-bg); color: var(--warning); }
+        .badge-high { background: var(--danger-bg); color: var(--danger); }
+
+        .badge-completed { background: var(--success-bg); color: var(--success); }
+        .badge-active { background: var(--info-bg); color: var(--info); }
+        .badge-incoming { background: var(--warning-bg); color: var(--warning); }
+        .badge-processing { background: rgba(139, 92, 246, 0.12); color: #a78bfa; }
+        .badge-failed { background: var(--danger-bg); color: var(--danger); }
+
+        /* Filters */
+        .filters-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-input, .filter-select {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            padding: 8px 14px;
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .filter-input:focus, .filter-select:focus {
+            border-color: var(--border-active);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .filter-input { width: 240px; }
+        .filter-select { min-width: 140px; }
+
+        option { background: var(--bg-secondary); }
+
+        /* Detail page */
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .detail-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+        }
+
+        .detail-card h3 {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .detail-field {
+            margin-bottom: 12px;
+        }
+
+        .detail-field .label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .detail-field .value {
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* Conversation messages */
+        .conversation-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .conversation-container h3 {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .chat-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .chat-msg {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            line-height: 1.5;
+            animation: msg-in 0.3s ease-out;
+        }
+
+        @keyframes msg-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chat-msg.assistant {
+            background: rgba(99, 102, 241, 0.12);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-msg.user {
+            background: rgba(255, 255, 255, 0.08);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-msg.system {
+            background: rgba(245, 158, 11, 0.08);
+            align-self: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .chat-role {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .chat-msg.assistant .chat-role { color: var(--accent-primary-light); }
+        .chat-msg.user .chat-role { color: var(--text-secondary); }
+
+        .chat-time {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* Action items list */
+        .action-items {
+            list-style: none;
+        }
+
+        .action-items li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .action-items li:last-child { border-bottom: none; }
+
+        .action-items li::before {
+            content: "→";
+            color: var(--accent-primary-light);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* Empty states */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-state h3 { font-size: 18px; color: var(--text-secondary); margin-bottom: 8px; }
+        .empty-state p { font-size: 14px; }
+
+        /* Back button */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 16px;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+            border: none;
+            background: none;
+            font-family: inherit;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-primary);
+        }
+
+        /* Active call card */
+        .active-call-card {
+            background: var(--bg-card);
+            border: 1px solid var(--info);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: glow 2s infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 8px rgba(59, 130, 246, 0.1); }
+            to { box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
+        }
+
+        .active-call-info {
+            display: flex;
+            gap: 32px;
+        }
+
+        .active-call-field .label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .active-call-field .value {
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .active-call-duration {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--info);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Recording player */
+        .recording-player {
+            margin-top: 16px;
+        }
+
+        .recording-player audio {
+            width: 100%;
+            height: 40px;
+        }
+
+        /* Page container (for SPA routing) */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar { width: 72px; }
+            .sidebar-brand p, .nav-item span, .sidebar-footer { display: none; }
+            .sidebar-brand h1 { font-size: 16px; }
+            .sidebar-brand { padding: 20px 12px; text-align: center; }
+            .nav-item { justify-content: center; padding: 12px; }
+            .main-content { margin-left: 72px; padding: 20px; }
+            .detail-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main-content { margin-left: 0; padding: 16px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .filters-bar { flex-direction: column; }
+            .filter-input { width: 100%; }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        /* Link-like text */
+        .link { color: var(--accent-primary-light); cursor: pointer; text-decoration: none; }
+        .link:hover { text-decoration: underline; }
+
+        /* User profile header */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .profile-avatar {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .profile-info h2 { font-size: 22px; font-weight: 700; }
+        .profile-meta {
+            display: flex; gap: 24px; margin-top: 6px;
+            font-size: 13px; color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h1>Saarthi</h1>
+                <p>Operations Dashboard</p>
+            </div>
+            <nav class="sidebar-nav">
+                <a class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a class="nav-item" data-page="calls" onclick="navigate('calls')">
+                    <span class="nav-icon">📞</span>
+                    <span>All Calls</span>
+                </a>
+                <a class="nav-item" data-page="active" onclick="navigate('active')">
+                    <span class="nav-icon">🔴</span>
+                    <span>Active Calls</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="phone-badge" id="phoneBadge">
+                    <span class="dot"></span>
+                    <span id="phoneNumber">Loading...</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page active">
+                <div class="page-header">
+                    <h2>Dashboard</h2>
+                    <p>Real-time overview of Saarthi phone guidance service</p>
+                </div>
+
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Calls</div>
+                        <div class="stat-value" id="statTotalCalls">—</div>
+                    </div>
+                    <div class="stat-card info">
+                        <div class="stat-label">Today's Calls</div>
+                        <div class="stat-value" id="statTodayCalls">—</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-label">Unique Callers</div>
+                        <div class="stat-value" id="statUnique">—</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-label">Active Calls</div>
+                        <div class="stat-value" id="statActive">—</div>
+                    </div>
+                    <div class="stat-card danger">
+                        <div class="stat-label">High Risk</div>
+                        <div class="stat-value" id="statHighRisk">—</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Recent Calls</h3>
+                    </div>
+                    <div id="recentCallsTable"></div>
+                </div>
+            </div>
+
+            <!-- Calls Page -->
+            <div id="page-calls" class="page">
+                <div class="page-header">
+                    <h2>All Calls</h2>
+                    <p>Browse and filter all Saarthi calls</p>
+                </div>
+
+                <div class="filters-bar">
+                    <input type="text" class="filter-input" id="filterSearch" placeholder="Search by phone number...">
+                    <select class="filter-select" id="filterDate">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                    </select>
+                    <select class="filter-select" id="filterTopic">
+                        <option value="all">All Topics</option>
+                        <option value="document_guidance">Document Guidance</option>
+                        <option value="government_services">Government Services</option>
+                        <option value="career_guidance">Career Guidance</option>
+                        <option value="education">Education</option>
+                        <option value="financial_info">Financial Info</option>
+                        <option value="legal_info">Legal Info</option>
+                        <option value="health_info">Health Info</option>
+                        <option value="technology">Technology</option>
+                        <option value="general_guidance">General Guidance</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <select class="filter-select" id="filterRisk">
+                        <option value="all">All Risk Levels</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                    <select class="filter-select" id="filterStatus">
+                        <option value="all">All Statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="active">Active</option>
+                        <option value="incoming">Incoming</option>
+                        <option value="processing">Processing</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+
+                <div class="table-container">
+                    <div id="allCallsTable"></div>
+                </div>
+            </div>
+
+            <!-- Active Calls Page -->
+            <div id="page-active" class="page">
+                <div class="page-header">
+                    <h2>Active Calls</h2>
+                    <p>Currently ongoing phone conversations</p>
+                </div>
+                <div id="activeCallsContainer"></div>
+            </div>
+
+            <!-- Call Detail Page -->
+            <div id="page-call-detail" class="page">
+                <button class="back-btn" onclick="history.back()">← Back</button>
+                <div id="callDetailContent"></div>
+            </div>
+
+            <!-- User Profile Page -->
+            <div id="page-user-profile" class="page">
+                <button class="back-btn" onclick="history.back()">← Back</button>
+                <div id="userProfileContent"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+    // ====================================================================
+    // LIFELINE AI DASHBOARD — CLIENT
+    // ====================================================================
+
+    const API_BASE = '';
+
+    // ------------------------------------------------------------------
+    // ROUTING
+    // ------------------------------------------------------------------
+
+    function navigate(page, params = {}) {
+        let hash = `#/${page}`;
+        if (params.id) hash += `/${params.id}`;
+        window.location.hash = hash;
+    }
+
+    function handleRoute() {
+        const hash = window.location.hash || '#/dashboard';
+        const parts = hash.replace('#/', '').split('/');
+        const page = parts[0] || 'dashboard';
+        const id = parts[1] || null;
+
+        // Hide all pages
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+        // Update nav
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        const activeNav = document.querySelector(`.nav-item[data-page="${page}"]`);
+        if (activeNav) activeNav.classList.add('active');
+
+        // Show the right page
+        switch (page) {
+            case 'dashboard':
+                showPage('page-dashboard');
+                loadDashboard();
+                break;
+            case 'calls':
+                showPage('page-calls');
+                loadAllCalls();
+                break;
+            case 'active':
+                showPage('page-active');
+                loadActiveCalls();
+                break;
+            case 'call':
+                showPage('page-call-detail');
+                loadCallDetail(id);
+                break;
+            case 'user':
+                showPage('page-user-profile');
+                loadUserProfile(id);
+                break;
+            default:
+                showPage('page-dashboard');
+                loadDashboard();
+        }
+    }
+
+    function showPage(pageId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        const el = document.getElementById(pageId);
+        if (el) el.classList.add('active');
+    }
+
+    window.addEventListener('hashchange', handleRoute);
+    window.addEventListener('load', () => {
+        loadPhoneNumber();
+        handleRoute();
+    });
+
+    // ------------------------------------------------------------------
+    // API HELPERS
+    // ------------------------------------------------------------------
+
+    async function api(path, params = {}) {
+        const url = new URL(path, window.location.origin);
+        Object.entries(params).forEach(([k, v]) => {
+            if (v && v !== 'all') url.searchParams.set(k, v);
+        });
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+    }
+
+    async function loadPhoneNumber() {
+        try {
+            const data = await api('/api/config/phone');
+            const phone = data.phone_number || 'Not configured';
+            document.getElementById('phoneNumber').textContent = phone;
+        } catch (e) {
+            document.getElementById('phoneNumber').textContent = 'Service Active';
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // FORMATTERS
+    // ------------------------------------------------------------------
+
+    function formatTopic(topic) {
+        const map = {
+            document_guidance: 'Document Guidance',
+            government_services: 'Government Services',
+            career_guidance: 'Career Guidance',
+            education: 'Education',
+            financial_info: 'Financial Info',
+            legal_info: 'Legal Info',
+            health_info: 'Health Info',
+            technology: 'Technology',
+            general_guidance: 'General Guidance',
+            other: 'Other',
+        };
+        return map[topic] || topic;
+    }
+
+    function formatTime(isoStr) {
+        if (!isoStr) return '—';
+        const d = new Date(isoStr);
+        return d.toLocaleString('en-IN', {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true,
+        });
+    }
+
+    function formatTimeShort(isoStr) {
+        if (!isoStr) return '—';
+        const d = new Date(isoStr);
+        return d.toLocaleTimeString('en-IN', {
+            hour: '2-digit', minute: '2-digit', hour12: true,
+        });
+    }
+
+    function riskBadge(level) {
+        return `<span class="badge badge-${level}">${level}</span>`;
+    }
+
+    function statusBadge(status) {
+        return `<span class="badge badge-${status}">${status}</span>`;
+    }
+
+    // ------------------------------------------------------------------
+    // CALL TABLE RENDERER
+    // ------------------------------------------------------------------
+
+    function renderCallsTable(calls, containerId) {
+        const container = document.getElementById(containerId);
+
+        if (!calls || calls.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">📭</div>
+                    <h3>No calls found</h3>
+                    <p>Calls will appear here when users call the Saarthi number.</p>
+                </div>`;
+            return;
+        }
+
+        let html = `<table>
+            <thead>
+                <tr>
+                    <th>Caller</th>
+                    <th>Topic</th>
+                    <th>Duration</th>
+                    <th>Risk</th>
+                    <th>Status</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        for (const call of calls) {
+            html += `
+                <tr class="clickable-row" onclick="navigate('call', {id: '${call.id}'})">
+                    <td><span class="link" onclick="event.stopPropagation(); navigate('user', {id: '${call.user_id}'})">${call.caller_phone}</span></td>
+                    <td>${formatTopic(call.topic)}</td>
+                    <td>${call.duration}</td>
+                    <td>${riskBadge(call.risk_level)}</td>
+                    <td>${statusBadge(call.status)}</td>
+                    <td>${formatTime(call.start_time)}</td>
+                </tr>`;
+        }
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    // ------------------------------------------------------------------
+    // DASHBOARD
+    // ------------------------------------------------------------------
+
+    async function loadDashboard() {
+        try {
+            const [stats, calls] = await Promise.all([
+                api('/api/dashboard/stats'),
+                api('/api/calls', { limit: '10' }),
+            ]);
+
+            document.getElementById('statTotalCalls').textContent = stats.total_calls;
+            document.getElementById('statTodayCalls').textContent = stats.today_calls;
+            document.getElementById('statUnique').textContent = stats.unique_callers;
+            document.getElementById('statActive').textContent = stats.active_calls;
+            document.getElementById('statHighRisk').textContent = stats.high_risk_calls;
+
+            renderCallsTable(calls, 'recentCallsTable');
+        } catch (e) {
+            console.error('Dashboard load failed:', e);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // ALL CALLS
+    // ------------------------------------------------------------------
+
+    async function loadAllCalls() {
+        const params = {
+            search: document.getElementById('filterSearch').value,
+            date_filter: document.getElementById('filterDate').value,
+            topic: document.getElementById('filterTopic').value,
+            risk_level: document.getElementById('filterRisk').value,
+            status: document.getElementById('filterStatus').value,
+        };
+        try {
+            const calls = await api('/api/calls', params);
+            renderCallsTable(calls, 'allCallsTable');
+        } catch (e) {
+            console.error('Calls load failed:', e);
+        }
+    }
+
+    // Debounced filter change
+    let filterTimeout;
+    function onFilterChange() {
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(loadAllCalls, 300);
+    }
+
+    document.getElementById('filterSearch').addEventListener('input', onFilterChange);
+    document.getElementById('filterDate').addEventListener('change', onFilterChange);
+    document.getElementById('filterTopic').addEventListener('change', onFilterChange);
+    document.getElementById('filterRisk').addEventListener('change', onFilterChange);
+    document.getElementById('filterStatus').addEventListener('change', onFilterChange);
+
+    // ------------------------------------------------------------------
+    // ACTIVE CALLS
+    // ------------------------------------------------------------------
+
+    async function loadActiveCalls() {
+        const container = document.getElementById('activeCallsContainer');
+        try {
+            const calls = await api('/api/calls/active');
+
+            if (!calls || calls.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">✅</div>
+                        <h3>No active calls</h3>
+                        <p>Active calls will appear here when a user calls the Saarthi number.</p>
+                    </div>`;
+                return;
+            }
+
+            let html = '';
+            for (const call of calls) {
+                const startTime = new Date(call.start_time);
+                const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = elapsed % 60;
+
+                html += `
+                    <div class="active-call-card" onclick="navigate('call', {id: '${call.id}'})">
+                        <div class="active-call-info">
+                            <div class="active-call-field">
+                                <div class="label">Caller</div>
+                                <div class="value">${call.caller_phone}</div>
+                            </div>
+                            <div class="active-call-field">
+                                <div class="label">Status</div>
+                                <div class="value">${statusBadge(call.status)}</div>
+                            </div>
+                            <div class="active-call-field">
+                                <div class="label">Started</div>
+                                <div class="value">${formatTimeShort(call.start_time)}</div>
+                            </div>
+                        </div>
+                        <div class="active-call-duration" data-start="${call.start_time}">
+                            ${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}
+                        </div>
+                    </div>`;
+            }
+
+            container.innerHTML = html;
+
+            // Start live timer updates
+            startActiveTimers();
+        } catch (e) {
+            console.error('Active calls load failed:', e);
+        }
+    }
+
+    let activeTimerInterval;
+    function startActiveTimers() {
+        clearInterval(activeTimerInterval);
+        activeTimerInterval = setInterval(() => {
+            document.querySelectorAll('.active-call-duration[data-start]').forEach(el => {
+                const start = new Date(el.dataset.start);
+                const elapsed = Math.floor((Date.now() - start.getTime()) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = elapsed % 60;
+                el.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+            });
+        }, 1000);
+    }
+
+    // ------------------------------------------------------------------
+    // CALL DETAIL
+    // ------------------------------------------------------------------
+
+    async function loadCallDetail(callId) {
+        const container = document.getElementById('callDetailContent');
+        if (!callId) {
+            container.innerHTML = '<div class="empty-state"><h3>Call not found</h3></div>';
+            return;
+        }
+
+        try {
+            const data = await api(`/api/calls/${callId}`);
+            const call = data.call;
+            const messages = data.messages || [];
+
+            // Parse action items
+            let actionItems = call.action_items;
+            if (typeof actionItems === 'string') {
+                try { actionItems = JSON.parse(actionItems); } catch(e) { actionItems = []; }
+            }
+
+            let html = `
+                <div class="page-header">
+                    <h2>Call Detail</h2>
+                    <p>Vapi ID: ${call.vapi_call_id}</p>
+                </div>
+
+                <div class="detail-grid">
+                    <div class="detail-card">
+                        <h3>📞 Call Information</h3>
+                        <div class="detail-field">
+                            <div class="label">Caller</div>
+                            <div class="value"><span class="link" onclick="navigate('user', {id: '${call.user_id}'})">${data.caller_phone}</span></div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="label">Status</div>
+                            <div class="value">${statusBadge(call.status)}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="label">Start Time</div>
+                            <div class="value">${formatTime(call.start_time)}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="label">End Time</div>
+                            <div class="value">${call.end_time ? formatTime(call.end_time) : '—'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="label">Duration</div>
+                            <div class="value">${call.duration_seconds > 0 ? Math.floor(call.duration_seconds/60) + 'm ' + Math.floor(call.duration_seconds%60) + 's' : '—'}</div>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <h3>🤖 AI Analysis</h3>
+                        <div class="detail-field">
+                            <div class="label">Topic</div>
+                            <div class="value">${formatTopic(call.topic)}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="label">Risk Level</div>
+                            <div class="value">${riskBadge(call.risk_level)}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="label">Summary</div>
+                            <div class="value">${call.summary || 'No summary available'}</div>
+                        </div>
+                        ${actionItems && actionItems.length > 0 ? `
+                        <div class="detail-field">
+                            <div class="label">Action Items</div>
+                            <ul class="action-items">
+                                ${actionItems.map(item => `<li>${item}</li>`).join('')}
+                            </ul>
+                        </div>` : ''}
+                    </div>
+                </div>`;
+
+            // Recording
+            if (call.recording_url) {
+                html += `
+                    <div class="detail-card recording-player" style="margin-bottom: 24px;">
+                        <h3>🎙️ Recording</h3>
+                        <audio controls src="${call.recording_url}" preload="metadata"></audio>
+                    </div>`;
+            }
+
+            // Conversation
+            if (messages.length > 0) {
+                html += `
+                    <div class="conversation-container">
+                        <h3>💬 Conversation</h3>
+                        <div class="chat-messages">`;
+
+                for (const msg of messages) {
+                    html += `
+                        <div class="chat-msg ${msg.role}">
+                            <div class="chat-role">${msg.role === 'assistant' ? 'AI' : msg.role.toUpperCase()}</div>
+                            <div>${msg.content}</div>
+                            <div class="chat-time">${formatTimeShort(msg.timestamp)}</div>
+                        </div>`;
+                }
+
+                html += '</div></div>';
+            } else if (call.transcript) {
+                // Fallback: show raw transcript
+                html += `
+                    <div class="conversation-container">
+                        <h3>💬 Transcript</h3>
+                        <div class="chat-messages">`;
+
+                const lines = call.transcript.split('\n').filter(l => l.trim());
+                for (const line of lines) {
+                    let role = 'system';
+                    let content = line;
+                    if (line.startsWith('AI:') || line.startsWith('ASSISTANT:')) {
+                        role = 'assistant';
+                        content = line.replace(/^(AI|ASSISTANT):\s*/, '');
+                    } else if (line.startsWith('USER:')) {
+                        role = 'user';
+                        content = line.replace(/^USER:\s*/, '');
+                    }
+
+                    html += `
+                        <div class="chat-msg ${role}">
+                            <div class="chat-role">${role === 'assistant' ? 'AI' : role.toUpperCase()}</div>
+                            <div>${content}</div>
+                        </div>`;
+                }
+
+                html += '</div></div>';
+            } else {
+                html += `
+                    <div class="conversation-container">
+                        <h3>💬 Conversation</h3>
+                        <div class="empty-state" style="padding: 40px;">
+                            <p>No conversation data available for this call.</p>
+                        </div>
+                    </div>`;
+            }
+
+            container.innerHTML = html;
+        } catch (e) {
+            console.error('Call detail load failed:', e);
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">❌</div>
+                    <h3>Failed to load call details</h3>
+                    <p>${e.message}</p>
+                </div>`;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // USER PROFILE
+    // ------------------------------------------------------------------
+
+    async function loadUserProfile(userId) {
+        const container = document.getElementById('userProfileContent');
+        if (!userId) {
+            container.innerHTML = '<div class="empty-state"><h3>User not found</h3></div>';
+            return;
+        }
+
+        try {
+            const data = await api(`/api/users/${userId}`);
+            const user = data.user;
+            const calls = data.calls || [];
+
+            let html = `
+                <div class="profile-header">
+                    <div class="profile-avatar">👤</div>
+                    <div class="profile-info">
+                        <h2>${data.masked_phone}</h2>
+                        <div class="profile-meta">
+                            <span>📞 ${user.total_calls} calls</span>
+                            <span>📅 First contact: ${formatTime(user.first_seen)}</span>
+                            <span>🕐 Last contact: ${formatTime(user.last_seen)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Call History</h3>
+                    </div>
+                    <div id="userCallsTable"></div>
+                </div>`;
+
+            container.innerHTML = html;
+            renderCallsTable(calls, 'userCallsTable');
+        } catch (e) {
+            console.error('User profile load failed:', e);
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">❌</div>
+                    <h3>Failed to load user profile</h3>
+                    <p>${e.message}</p>
+                </div>`;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // AUTO-REFRESH
+    // ------------------------------------------------------------------
+
+    setInterval(() => {
+        const hash = window.location.hash || '#/dashboard';
+        if (hash.startsWith('#/dashboard')) loadDashboard();
+        if (hash.startsWith('#/active')) loadActiveCalls();
+    }, 15000); // Refresh every 15 seconds
+
+    </script>
+</body>
+</html>

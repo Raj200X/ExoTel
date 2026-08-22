@@ -1,4 +1,4 @@
-# meta-NFS virtual environment and caches
+# Saarthi virtual environment and caches
 .venv/
 __pycache__/
 *.pyc

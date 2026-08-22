@@ -1,1 +1,0 @@
-# meta-NFS core package
