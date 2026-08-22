@@ -1,22 +1,20 @@
 """
-meta-NFS Live Voice & Web Server (Localhost Test Interface + Exotel Webhook + Sarvam AI Speech)
+meta-NFS Live Voice Server (Supports Exotel Voicebot / Stream Applet & Passthru Webhook)
 
-Endpoints:
-  - GET /                       : Web browser interface for interactive localhost testing (audio + UI)
-  - GET /health                 : Server status check
-  - GET/POST /exotel/incoming   : Initial call ingress webhook from Exotel
-  - GET/POST /exotel/process    : Conversational turn webhook
-  - GET /audio/{filename}       : Serves generated Sarvam AI speech audio files
+This server supports two Exotel integration patterns:
+1. Voicebot / Stream Applet: WebSockets / HTTP for direct AI voicebot conversation (No call forwarding)
+2. Passthru Applet: Native Exotel JSON response (< 500ms response time to prevent personal phone fallback)
 """
 
 import os
 import base64
 from pathlib import Path
+from typing import Dict
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, Response
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from pydantic import BaseModel
 
 load_dotenv()
@@ -27,7 +25,7 @@ from metanfs.models.enums import Domain
 from metanfs.routing.engine import RoutingEngine
 from metanfs.scope_gate.engine import ScopeGateEngine
 
-app = FastAPI(title="meta-NFS Voice Server", version="0.1.0")
+app = FastAPI(title="meta-NFS Voice Server", version="0.2.0")
 
 AUDIO_DIR = Path("data/audio_cache")
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
@@ -44,7 +42,7 @@ routing_engine.load_routing_tables(routing_dir)
 
 
 class SimpleFastModel:
-    """Fast Model for fact extraction."""
+    """Fast Model for legal triage fact extraction."""
 
     async def process(
         self,
@@ -92,7 +90,7 @@ class SimpleFastModel:
         fact.overall_confidence = 0.85
         return FastModelOutput(
             updated_triage_fact=fact,
-            response_candidate="I understand your legal question.",
+            response_candidate="I understand your legal situation.",
             needs_retrieval=False,
         )
 
@@ -140,7 +138,103 @@ async def generate_sarvam_tts(text: str, filename: str) -> Path | None:
 
 @app.get("/health")
 def health():
-    return {"status": "online", "system": "meta-NFS Voice Server"}
+    return {"status": "online", "system": "meta-NFS Voice Server", "version": "0.2.0"}
+
+
+# ---------------------------------------------------------------------------
+# Pattern A: Exotel Voicebot / Stream Applet (WebSockets / JSON Voicebot API)
+# ---------------------------------------------------------------------------
+
+
+@app.api_route("/exotel/voicebot", methods=["GET", "POST"])
+async def exotel_voicebot(request: Request):
+    """Voicebot Applet Endpoint — Returns Voicebot JSON configuration."""
+    return JSONResponse(
+        {
+            "status": "success",
+            "greeting": "नमस्ते! meta-NFS Legal Triage line में आपका स्वागत है। कृपया अपनी समस्या बताएं।",
+            "voicebot_url": f"wss://{request.headers.get('host', 'localhost')}/exotel/ws",
+        }
+    )
+
+
+@app.websocket("/exotel/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """Real-time Voicebot WebSocket stream for Exotel Stream/Voicebot applet."""
+    await websocket.accept()
+    session = conversation_manager.create_session()
+    print(f"WebSocket connected for AI session {session.session_id}")
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            utterance = Utterance(session_id=session.session_id, text=data)
+            result = await conversation_manager.process_utterance(utterance)
+
+            await websocket.send_json(
+                {
+                    "event": "media",
+                    "text": result.response_text,
+                    "action": result.scope_gate_decision.action,
+                    "rule_id": result.scope_gate_decision.rule_id,
+                }
+            )
+    except WebSocketDisconnect:
+        print(f"WebSocket session {session.session_id} disconnected.")
+
+
+# ---------------------------------------------------------------------------
+# Pattern B: Exotel Passthru Applet (Fast JSON Response < 500ms)
+# ---------------------------------------------------------------------------
+
+
+@app.api_route("/exotel/incoming", methods=["GET", "POST"])
+async def exotel_incoming(request: Request):
+    """Exotel Passthru Webhook — Fast JSON Response to prevent forwarding to personal phone."""
+    params = dict(request.query_params)
+    call_sid = params.get("CallSid", "default_call")
+    caller_phone = params.get("From", "Unknown")
+
+    print(f"\n📞 INCOMING CALL from {caller_phone} (CallSid: {call_sid})")
+    conversation_manager.create_session(call_sid)
+
+    # Exotel Passthru Native JSON Format
+    # Prevents fallback to personal phone number
+    return JSONResponse(
+        {
+            "select": "play_and_gather",
+            "body": "नमस्ते! meta-NFS Legal Triage line में आपका स्वागत है। कृपया अपनी समस्या बताएं।",
+            "action_url": f"https://{request.headers.get('host', 'localhost')}/exotel/process",
+        }
+    )
+
+
+@app.api_route("/exotel/process", methods=["GET", "POST"])
+async def exotel_process(request: Request):
+    """Exotel Passthru Turn Processor."""
+    params = dict(request.query_params)
+    call_sid = params.get("CallSid", "default_call")
+    caller_speech = params.get("digits") or params.get("Speech", "") or params.get("digits_typed", "")
+
+    if not caller_speech:
+        caller_speech = "A customer's cheque for 50000 bounced and I haven't sent notice yet."
+
+    utterance = Utterance(session_id=call_sid, text=caller_speech)
+    result = await conversation_manager.process_utterance(utterance)
+
+    ai_response = result.response_text
+
+    return JSONResponse(
+        {
+            "select": "play",
+            "body": ai_response,
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# Localhost Web UI & Audio Server
+# ---------------------------------------------------------------------------
 
 
 class TestTurnPayload(BaseModel):
@@ -150,7 +244,6 @@ class TestTurnPayload(BaseModel):
 
 @app.post("/api/test_turn")
 async def api_test_turn(payload: TestTurnPayload):
-    """Localhost API endpoint for interactive web browser testing."""
     utterance = Utterance(session_id=payload.session_id, text=payload.text)
     result = await conversation_manager.process_utterance(utterance)
 
@@ -170,9 +263,16 @@ async def api_test_turn(payload: TestTurnPayload):
     }
 
 
+@app.get("/audio/{filename}")
+def serve_audio(filename: str):
+    file_path = AUDIO_DIR / filename
+    if file_path.exists():
+        return FileResponse(file_path, media_type="audio/wav")
+    return Response(status_code=404)
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
-    """Beautiful Localhost Testing Web Interface."""
     return """
 <!DOCTYPE html>
 <html lang="en">
@@ -350,63 +450,6 @@ def index():
 </body>
 </html>
 """
-
-
-@app.api_route("/exotel/incoming", methods=["GET", "POST"])
-async def exotel_incoming(request: Request):
-    """Exotel Passthru Applet - Incoming call handler."""
-    params = dict(request.query_params)
-    call_sid = params.get("CallSid", "default_call")
-    caller_phone = params.get("From", "Unknown")
-
-    print(f"\n📞 INCOMING CALL from {caller_phone} (CallSid: {call_sid})")
-    conversation_manager.create_session(call_sid)
-
-    greeting = (
-        "नमस्ते! meta-NFS Legal Triage line में आपका स्वागत है। "
-        "कृपया अपनी कानूनी समस्या का विवरण दें।"
-    )
-
-    await generate_sarvam_tts(greeting, f"{call_sid}_greeting.wav")
-
-    response_body = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say>{greeting}</Say>
-</Response>"""
-    return Response(content=response_body, media_type="application/xml")
-
-
-@app.api_route("/exotel/process", methods=["GET", "POST"])
-async def exotel_process(request: Request):
-    """Exotel Applet turn processor."""
-    params = dict(request.query_params)
-    call_sid = params.get("CallSid", "default_call")
-    caller_speech = params.get("digits") or params.get("Speech", "") or params.get("digits_typed", "")
-
-    if not caller_speech:
-        caller_speech = "A customer's cheque for 50000 bounced and I haven't sent notice yet."
-
-    utterance = Utterance(session_id=call_sid, text=caller_speech)
-    result = await conversation_manager.process_utterance(utterance)
-
-    ai_response = result.response_text
-
-    audio_filename = f"{call_sid}_turn_{len(result.session.turn_history)}.wav"
-    await generate_sarvam_tts(ai_response, audio_filename)
-
-    response_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say>{ai_response}</Say>
-</Response>"""
-    return Response(content=response_xml, media_type="application/xml")
-
-
-@app.get("/audio/{filename}")
-def serve_audio(filename: str):
-    file_path = AUDIO_DIR / filename
-    if file_path.exists():
-        return FileResponse(file_path, media_type="audio/wav")
-    return Response(status_code=404)
 
 
 if __name__ == "__main__":
