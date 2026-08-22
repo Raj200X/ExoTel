@@ -281,7 +281,7 @@ async def _generate_ai_response(call_sid: str, user_speech: str) -> str:
             import asyncio
             response = await asyncio.to_thread(
                 client.models.generate_content,
-                model="gemini-2.0-flash",
+                model="gemini-1.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
