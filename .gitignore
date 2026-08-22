@@ -21,3 +21,7 @@ build/
 # Environment
 .env
 .env.local
+
+# Local cache & logs
+data/
+*.log

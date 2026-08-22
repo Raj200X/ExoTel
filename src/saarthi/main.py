@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from saarthi.api import routes, webhooks
+from saarthi.api import routes, voicebot, webhooks
 from saarthi.core import state
 from saarthi.core.config import AppConfig
 from saarthi.core.database import Database
@@ -98,6 +98,7 @@ app.add_middleware(
 
 app.include_router(routes.router)
 app.include_router(webhooks.router)
+app.include_router(voicebot.router)
 
 
 # ---------------------------------------------------------------------------
@@ -145,7 +146,7 @@ async def health_check() -> dict[str, Any]:
         "version": "1.0.0",
         "env": state.config.env if state.config else "unknown",
         "gemini_available": state.config.has_gemini if state.config else False,
-        "vapi_configured": state.config.has_vapi if state.config else False,
+        "exotel_configured": state.config.has_exotel if state.config else False,
         "phone_number": state.config.saarthi_phone_number if state.config else "",
     }
 

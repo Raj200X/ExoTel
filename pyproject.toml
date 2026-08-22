@@ -1,7 +1,11 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "saarthi"
-version = "1.0.0"
-description = "Saarthi: AI-powered phone guidance service for common people"
+name = "metanfs"
+version = "0.1.0"
+description = "meta-NFS: General-purpose AI legal triage system for India"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
@@ -10,6 +14,7 @@ dependencies = [
     "asyncpg>=0.29.0",
     "google-genai>=1.0.0",
     "httpx>=0.27.0",
+    "websockets>=13.0.0",
     "python-dotenv>=1.0.0",
     "python-multipart>=0.0.9",
 ]
@@ -20,6 +25,9 @@ dev = [
     "pytest-asyncio>=0.23",
     "ruff>=0.5.0",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 target-version = "py312"

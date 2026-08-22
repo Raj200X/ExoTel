@@ -95,7 +95,7 @@ class Call(BaseModel):
     """A complete call record."""
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    vapi_call_id: str  # External Vapi call ID for deduplication
+    exotel_call_sid: str  # Exotel CallSid for deduplication
     user_id: str
     status: CallStatus = CallStatus.INCOMING
     start_time: datetime = Field(default_factory=datetime.utcnow)
@@ -144,7 +144,7 @@ class CallListItem(BaseModel):
     """Abbreviated call info for list views."""
 
     id: str
-    vapi_call_id: str
+    exotel_call_sid: str
     caller_phone: str  # Masked
     topic: str
     duration: str

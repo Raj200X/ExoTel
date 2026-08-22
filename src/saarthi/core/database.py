@@ -63,7 +63,7 @@ class Database:
 
                 CREATE TABLE IF NOT EXISTS calls (
                     id TEXT PRIMARY KEY,
-                    vapi_call_id TEXT UNIQUE NOT NULL,
+                    exotel_call_sid TEXT UNIQUE NOT NULL,
                     user_id TEXT NOT NULL REFERENCES users(id),
                     status TEXT NOT NULL DEFAULT 'incoming',
                     start_time TEXT NOT NULL,
@@ -78,7 +78,7 @@ class Database:
                     created_at TEXT NOT NULL
                 );
 
-                CREATE INDEX IF NOT EXISTS idx_calls_vapi_id ON calls(vapi_call_id);
+                CREATE INDEX IF NOT EXISTS idx_calls_exotel_sid ON calls(exotel_call_sid);
                 CREATE INDEX IF NOT EXISTS idx_calls_user_id ON calls(user_id);
                 CREATE INDEX IF NOT EXISTS idx_calls_status ON calls(status);
                 CREATE INDEX IF NOT EXISTS idx_calls_start_time ON calls(start_time);
@@ -175,24 +175,24 @@ class Database:
     # -------------------------------------------------------------------
 
     async def create_call(self, call: Call) -> Call:
-        """Create a new call record. Skips if vapi_call_id already exists."""
+        """Create a new call record. Skips if exotel_call_sid already exists."""
         async with self._pool.acquire() as conn:
             # Check for duplicate
             existing = await conn.fetchrow(
-                "SELECT id FROM calls WHERE vapi_call_id = $1", call.vapi_call_id
+                "SELECT id FROM calls WHERE exotel_call_sid = $1", call.exotel_call_sid
             )
             if existing:
-                logger.debug("Call with vapi_call_id %s already exists, skipping", call.vapi_call_id)
+                logger.debug("Call with exotel_call_sid %s already exists, skipping", call.exotel_call_sid)
                 return await self.get_call(existing["id"])
 
             await conn.execute(
                 """INSERT INTO calls
-                   (id, vapi_call_id, user_id, status, start_time, end_time,
+                   (id, exotel_call_sid, user_id, status, start_time, end_time,
                     duration_seconds, transcript, recording_url, summary, topic,
                     risk_level, action_items, created_at)
                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)""",
                 call.id,
-                call.vapi_call_id,
+                call.exotel_call_sid,
                 call.user_id,
                 call.status.value,
                 call.start_time.isoformat(),
@@ -206,15 +206,15 @@ class Database:
                 json.dumps(call.action_items),
                 call.created_at.isoformat(),
             )
-            logger.info("Created call: %s (vapi: %s)", call.id, call.vapi_call_id)
+            logger.info("Created call: %s ( exotel: %s)", call.id, call.exotel_call_sid)
             return call
 
     async def update_call(
         self,
-        vapi_call_id: str,
+        exotel_call_sid: str,
         **kwargs: Any,
     ) -> Call | None:
-        """Update a call record by its Vapi call ID."""
+        """Update a call record by its Exotel CallSid."""
         set_parts = []
         values = []
         param_idx = 1
@@ -236,12 +236,12 @@ class Database:
         if not set_parts:
             return None
 
-        values.append(vapi_call_id)
-        query = f"UPDATE calls SET {', '.join(set_parts)} WHERE vapi_call_id = ${param_idx}"
+        values.append(exotel_call_sid)
+        query = f"UPDATE calls SET {', '.join(set_parts)} WHERE exotel_call_sid = ${param_idx}"
         
         async with self._pool.acquire() as conn:
             await conn.execute(query, *values)
-            return await self.get_call_by_vapi_id(vapi_call_id)
+            return await self.get_call_by_exotel_sid(exotel_call_sid)
 
     async def get_call(self, call_id: str) -> Call | None:
         """Get a call by internal ID."""
@@ -251,11 +251,11 @@ class Database:
                 return None
             return self._row_to_call(row)
 
-    async def get_call_by_vapi_id(self, vapi_call_id: str) -> Call | None:
-        """Get a call by its Vapi call ID."""
+    async def get_call_by_exotel_sid(self, exotel_call_sid: str) -> Call | None:
+        """Get a call by its Exotel CallSid."""
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(
-                "SELECT * FROM calls WHERE vapi_call_id = $1", vapi_call_id
+                "SELECT * FROM calls WHERE exotel_call_sid = $1", exotel_call_sid
             )
             if not row:
                 return None
@@ -333,7 +333,7 @@ class Database:
                 items.append(
                     CallListItem(
                         id=call.id,
-                        vapi_call_id=call.vapi_call_id,
+                        exotel_call_sid=call.exotel_call_sid,
                         caller_phone=user.masked_phone,
                         topic=call.topic.value,
                         duration=call.duration_display,
@@ -362,7 +362,7 @@ class Database:
                 items.append(
                     CallListItem(
                         id=call.id,
-                        vapi_call_id=call.vapi_call_id,
+                        exotel_call_sid=call.exotel_call_sid,
                         caller_phone=user.masked_phone,
                         topic=call.topic.value,
                         duration=call.duration_display,
@@ -391,7 +391,7 @@ class Database:
                 items.append(
                     CallListItem(
                         id=call.id,
-                        vapi_call_id=call.vapi_call_id,
+                        exotel_call_sid=call.exotel_call_sid,
                         caller_phone=user.masked_phone,
                         topic=call.topic.value,
                         duration=call.duration_display,
@@ -506,7 +506,7 @@ class Database:
 
         return Call(
             id=row["id"],
-            vapi_call_id=row["vapi_call_id"],
+            exotel_call_sid=row["exotel_call_sid"],
             user_id=row["user_id"],
             status=CallStatus(row["status"]),
             start_time=datetime.fromisoformat(row["start_time"]),

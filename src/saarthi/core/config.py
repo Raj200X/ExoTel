@@ -26,11 +26,18 @@ class AppConfig:
     gemini_api_key: str = ""
     model_name: str = "gemini-2.0-flash"
 
-    # --- Vapi ---
-    vapi_api_key: str = ""
+    # --- Exotel Telephony ---
+    exotel_account_sid: str = ""
+    exotel_api_key: str = ""
+    exotel_api_token: str = ""
+    exotel_virtual_number: str = ""
 
     # --- Saarthi ---
     saarthi_phone_number: str = ""
+
+    # --- Speech Stack ---
+    speech_provider: str = "sarvam"
+    sarvam_api_key: str = ""
 
     # --- Database ---
     database_url: str = "postgresql://user:password@localhost:5432/saarthi_db"
@@ -55,8 +62,13 @@ class AppConfig:
             port=int(os.getenv("PORT", "8000")),
             gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
             model_name=os.getenv("MODEL_NAME", "gemini-2.0-flash"),
-            vapi_api_key=os.getenv("VAPI_API_KEY", ""),
+            exotel_account_sid=os.getenv("EXOTEL_ACCOUNT_SID", ""),
+            exotel_api_key=os.getenv("EXOTEL_API_KEY", ""),
+            exotel_api_token=os.getenv("EXOTEL_API_TOKEN", ""),
+            exotel_virtual_number=os.getenv("EXOTEL_VIRTUAL_NUMBER", ""),
             saarthi_phone_number=os.getenv("SAARTHI_PHONE_NUMBER", ""),
+            speech_provider=os.getenv("SPEECH_PROVIDER", "sarvam"),
+            sarvam_api_key=os.getenv("SARVAM_API_KEY", ""),
             database_url=os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/saarthi_db"),
         )
 
@@ -79,10 +91,10 @@ class AppConfig:
         return bool(self.gemini_api_key)
 
     @property
-    def has_vapi(self) -> bool:
-        """Check if the Vapi API key is configured.
+    def has_exotel(self) -> bool:
+        """Check if Exotel credentials are configured.
 
         Returns:
-            True if `vapi_api_key` is a non-empty string, False otherwise.
+            True if `exotel_account_sid` is a non-empty string, False otherwise.
         """
-        return bool(self.vapi_api_key)
+        return bool(self.exotel_account_sid)

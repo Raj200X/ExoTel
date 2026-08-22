@@ -116,7 +116,7 @@ async def generate_sarvam_tts(text: str, filename: str) -> Path | None:
         "loudness": 1.5,
         "speech_sample_rate": 8000,
         "enable_preprocessing": True,
-        "model": "bulbul:v1",
+        "model": "bulbul:v2",
     }
 
     try:
