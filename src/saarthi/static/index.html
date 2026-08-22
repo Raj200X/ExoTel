@@ -646,6 +646,10 @@
                     <span class="nav-icon">🔴</span>
                     <span>Active Calls</span>
                 </a>
+                <a class="nav-item" style="margin-top: 24px; background: var(--accent-gradient); font-weight: 600;" onclick="startWebCall()">
+                    <span class="nav-icon">🎙️</span>
+                    <span>Call Saarthi AI</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <div class="phone-badge" id="phoneBadge">
@@ -1291,6 +1295,99 @@
         if (hash.startsWith('#/active')) loadActiveCalls();
     }, 15000); // Refresh every 15 seconds
 
+    // ------------------------------------------------------------------
+    // WEB VOICE CALL (Browser WebRTC/AudioContext -> WebSocket)
+    // ------------------------------------------------------------------
+
+    let webCallSocket = null;
+    let audioContext = null;
+    let mediaStream = null;
+
+    async function startWebCall() {
+        if (webCallSocket) return alert("Call already in progress!");
+
+        try {
+            mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/browser`;
+            webCallSocket = new WebSocket(wsUrl);
+
+            webCallSocket.onopen = () => {
+                console.log("Browser WebSocket Connected");
+                
+                // Set up microphone capture
+                const source = audioContext.createMediaStreamSource(mediaStream);
+                const processor = audioContext.createScriptProcessor(4096, 1, 1);
+                
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+                
+                processor.onaudioprocess = (e) => {
+                    if (webCallSocket.readyState === WebSocket.OPEN) {
+                        const float32Data = e.inputBuffer.getChannelData(0);
+                        const pcmData = new Int16Array(float32Data.length);
+                        for (let i = 0; i < float32Data.length; i++) {
+                            const s = Math.max(-1, Math.min(1, float32Data[i]));
+                            pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                        }
+                        
+                        // Convert Int16Array to Base64
+                        const buffer = new Uint8Array(pcmData.buffer);
+                        let binary = '';
+                        for (let i = 0; i < buffer.byteLength; i++) {
+                            binary += String.fromCharCode(buffer[i]);
+                        }
+                        const b64 = window.btoa(binary);
+                        
+                        webCallSocket.send(JSON.stringify({
+                            event: 'media',
+                            media: { payload: b64 }
+                        }));
+                    }
+                };
+            };
+
+            webCallSocket.onmessage = async (e) => {
+                const msg = JSON.parse(e.data);
+                if (msg.event === 'media' && msg.media && msg.media.payload) {
+                    const binaryStr = window.atob(msg.media.payload);
+                    const bytes = new Uint8Array(binaryStr.length);
+                    for (let i = 0; i < binaryStr.length; i++) {
+                        bytes[i] = binaryStr.charCodeAt(i);
+                    }
+                    const int16 = new Int16Array(bytes.buffer);
+                    const float32 = new Float32Array(int16.length);
+                    for (let i = 0; i < int16.length; i++) {
+                        float32[i] = int16[i] / (int16[i] >= 0 ? 32767 : 32768);
+                    }
+                    
+                    const buffer = audioContext.createBuffer(1, float32.length, 16000);
+                    buffer.copyToChannel(float32, 0);
+                    
+                    const source = audioContext.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(audioContext.destination);
+                    source.start();
+                }
+            };
+
+            webCallSocket.onclose = () => stopWebCall();
+            
+            alert("Call started! Speak into your microphone.");
+        } catch (e) {
+            alert("Microphone access denied or error: " + e.message);
+        }
+    }
+
+    function stopWebCall() {
+        if (webCallSocket) { webCallSocket.close(); webCallSocket = null; }
+        if (audioContext) { audioContext.close(); audioContext = null; }
+        if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+        console.log("Web Call Ended.");
+    }
+    
     </script>
 </body>
 </html>

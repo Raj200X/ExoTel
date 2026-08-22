@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from saarthi.api import routes, twilio, voicebot, webhooks
+from saarthi.api import browser_voice, routes, twilio, voicebot, webhooks
 from saarthi.core import state
 from saarthi.core.config import AppConfig
 from saarthi.core.database import Database
@@ -100,6 +100,7 @@ app.include_router(routes.router)
 app.include_router(webhooks.router)
 app.include_router(voicebot.router)
 app.include_router(twilio.router)
+app.include_router(browser_voice.router)
 
 
 # ---------------------------------------------------------------------------
