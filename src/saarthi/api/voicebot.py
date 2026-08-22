@@ -405,6 +405,7 @@ async def _stream_audio_to_exotel(
             "event": "media",
             "sequence_number": session["seq_out"],
             "stream_sid": stream_sid,
+            "streamSid": stream_sid,
             "media": {
                 "chunk": session["chunk_out"],
                 "timestamp": str(timestamp_ms),
