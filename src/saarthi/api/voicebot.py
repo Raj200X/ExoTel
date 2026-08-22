@@ -370,7 +370,7 @@ async def _generate_ai_response(session: dict[str, Any]) -> str:
 
         response = await asyncio.to_thread(
             client.models.generate_content,
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,

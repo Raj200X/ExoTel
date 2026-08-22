@@ -24,7 +24,7 @@ class AppConfig:
 
     # --- LLM Provider (Google Gemini) ---
     gemini_api_key: str = ""
-    model_name: str = "gemini-2.5-flash"
+    model_name: str = "gemini-3.6-flash"
 
     # --- Exotel Telephony ---
     exotel_account_sid: str = ""
@@ -61,7 +61,7 @@ class AppConfig:
             host=os.getenv("HOST", "0.0.0.0"),
             port=int(os.getenv("PORT", "8000")),
             gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
-            model_name=os.getenv("MODEL_NAME", "gemini-2.5-flash"),
+            model_name=os.getenv("MODEL_NAME", "gemini-3.6-flash"),
             exotel_account_sid=os.getenv("EXOTEL_ACCOUNT_SID", ""),
             exotel_api_key=os.getenv("EXOTEL_API_KEY", ""),
             exotel_api_token=os.getenv("EXOTEL_API_TOKEN", ""),

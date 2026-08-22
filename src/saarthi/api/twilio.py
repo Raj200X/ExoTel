@@ -379,7 +379,7 @@ async def _generate_gemini_response(session: dict[str, Any]) -> str:
         prompt = "\n".join(history)
         response = await asyncio.to_thread(
             client.models.generate_content,
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
