@@ -646,7 +646,7 @@
                     <span class="nav-icon">🔴</span>
                     <span>Active Calls</span>
                 </a>
-                <a class="nav-item" style="margin-top: 24px; background: var(--accent-gradient); font-weight: 600;" onclick="startWebCall()">
+                <a class="nav-item" data-page="webcall" style="margin-top: 24px; background: var(--accent-gradient); font-weight: 600;" onclick="navigate('webcall')">
                     <span class="nav-icon">🎙️</span>
                     <span>Call Saarthi AI</span>
                 </a>
@@ -661,6 +661,34 @@
 
         <!-- Main Content -->
         <main class="main-content">
+            <!-- Web Call Interface -->
+            <div id="page-webcall" class="page">
+                <div class="page-header" style="text-align: center; margin-top: 40px; margin-bottom: 60px;">
+                    <h2 style="font-size: 32px;">Saarthi Web Dialer</h2>
+                    <p style="font-size: 16px;">Talk to the AI directly from your browser.</p>
+                </div>
+
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    
+                    <!-- Pulsing Mic Button -->
+                    <div id="webCallMic" onclick="toggleWebCall()" style="width: 140px; height: 140px; border-radius: 50%; background: var(--bg-card); border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 64px; cursor: pointer; transition: all 0.3s ease; box-shadow: var(--shadow-lg); position: relative; z-index: 10;">
+                        🎙️
+                    </div>
+                    
+                    <!-- Status Text -->
+                    <div id="webCallStatus" style="margin-top: 40px; font-size: 20px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px;">
+                        Ready to Connect
+                    </div>
+                    <div id="webCallSubtext" style="margin-top: 8px; font-size: 14px; color: var(--text-muted);">
+                        Click the microphone to start
+                    </div>
+
+                    <!-- End Call Button (Hidden initially) -->
+                    <button id="webCallEndBtn" onclick="stopWebCall()" style="display: none; margin-top: 40px; padding: 12px 32px; background: var(--danger); color: white; border: none; border-radius: var(--radius-md); font-weight: 600; cursor: pointer; font-size: 16px; transition: opacity 0.2s;">
+                        End Call
+                    </button>
+                </div>
+            </div>
             <!-- Dashboard Page -->
             <div id="page-dashboard" class="page active">
                 <div class="page-header">
@@ -1303,10 +1331,26 @@
     let audioContext = null;
     let mediaStream = null;
 
+    function toggleWebCall() {
+        if (webCallSocket) {
+            stopWebCall();
+        } else {
+            startWebCall();
+        }
+    }
+
     async function startWebCall() {
-        if (webCallSocket) return alert("Call already in progress!");
+        if (webCallSocket) return;
+
+        const micBtn = document.getElementById('webCallMic');
+        const statusText = document.getElementById('webCallStatus');
+        const subtext = document.getElementById('webCallSubtext');
+        const endBtn = document.getElementById('webCallEndBtn');
 
         try {
+            statusText.textContent = "Connecting...";
+            subtext.textContent = "Requesting microphone access...";
+            
             mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
             
@@ -1316,8 +1360,14 @@
 
             webCallSocket.onopen = () => {
                 console.log("Browser WebSocket Connected");
+                statusText.textContent = "Listening";
+                statusText.style.color = "var(--success)";
+                subtext.textContent = "Speak into your microphone";
                 
-                // Set up microphone capture
+                micBtn.style.animation = "pulse-dot 1.5s infinite";
+                micBtn.style.borderColor = "var(--success)";
+                endBtn.style.display = "block";
+                
                 const source = audioContext.createMediaStreamSource(mediaStream);
                 const processor = audioContext.createScriptProcessor(4096, 1, 1);
                 
@@ -1333,7 +1383,6 @@
                             pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
                         }
                         
-                        // Convert Int16Array to Base64
                         const buffer = new Uint8Array(pcmData.buffer);
                         let binary = '';
                         for (let i = 0; i < buffer.byteLength; i++) {
@@ -1352,6 +1401,11 @@
             webCallSocket.onmessage = async (e) => {
                 const msg = JSON.parse(e.data);
                 if (msg.event === 'media' && msg.media && msg.media.payload) {
+                    statusText.textContent = "AI Speaking";
+                    statusText.style.color = "var(--accent-primary)";
+                    micBtn.style.animation = "pulse-dot 0.8s infinite";
+                    micBtn.style.borderColor = "var(--accent-primary)";
+                    
                     const binaryStr = window.atob(msg.media.payload);
                     const bytes = new Uint8Array(binaryStr.length);
                     for (let i = 0; i < binaryStr.length; i++) {
@@ -1369,15 +1423,24 @@
                     const source = audioContext.createBufferSource();
                     source.buffer = buffer;
                     source.connect(audioContext.destination);
+                    
+                    source.onended = () => {
+                        statusText.textContent = "Listening";
+                        statusText.style.color = "var(--success)";
+                        micBtn.style.animation = "pulse-dot 1.5s infinite";
+                        micBtn.style.borderColor = "var(--success)";
+                    };
+                    
                     source.start();
                 }
             };
 
             webCallSocket.onclose = () => stopWebCall();
             
-            alert("Call started! Speak into your microphone.");
         } catch (e) {
-            alert("Microphone access denied or error: " + e.message);
+            statusText.textContent = "Microphone Error";
+            statusText.style.color = "var(--danger)";
+            subtext.textContent = e.message;
         }
     }
 
@@ -1385,6 +1448,23 @@
         if (webCallSocket) { webCallSocket.close(); webCallSocket = null; }
         if (audioContext) { audioContext.close(); audioContext = null; }
         if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+        
+        const micBtn = document.getElementById('webCallMic');
+        const statusText = document.getElementById('webCallStatus');
+        const subtext = document.getElementById('webCallSubtext');
+        const endBtn = document.getElementById('webCallEndBtn');
+        
+        if (micBtn) {
+            micBtn.style.animation = "none";
+            micBtn.style.borderColor = "var(--border-color)";
+        }
+        if (statusText) {
+            statusText.textContent = "Call Ended";
+            statusText.style.color = "var(--text-secondary)";
+        }
+        if (subtext) subtext.textContent = "Click the microphone to start again";
+        if (endBtn) endBtn.style.display = "none";
+        
         console.log("Web Call Ended.");
     }
     
