@@ -40,6 +40,7 @@ async def browser_websocket(websocket: WebSocket):
         "silence_chunks": 0,
         "is_speaking": False,
         "processing": False,
+        "last_rms": 0,
     }
 
     logger.info("🌐 Browser Voice WebSocket connected")
@@ -63,32 +64,45 @@ async def browser_websocket(websocket: WebSocket):
                     session["audio_buffer"].extend(pcm_bytes)
 
                     rms = _calculate_rms(pcm_bytes)
+                    session["last_rms"] = rms
+                    
                     if rms < SILENCE_THRESHOLD:
                         session["silence_chunks"] += 1
                     else:
                         session["silence_chunks"] = 0
                         session["is_speaking"] = True
 
-                    # Each browser chunk is usually ~100ms
-                    silence_ms = session["silence_chunks"] * 100
-                    min_audio = SAMPLE_RATE * 2 * 1  # 1 sec min audio
+                    # Each chunk of 4096 samples at 16000Hz is exactly 256ms
+                    silence_ms = session["silence_chunks"] * 256
+                    buffer_duration_ms = (len(session["audio_buffer"]) / 2 / SAMPLE_RATE) * 1000
 
-                    if (
-                        session["is_speaking"]
-                        and silence_ms >= SILENCE_DURATION_MS
-                        and len(session["audio_buffer"]) >= min_audio
-                        and not session["processing"]
-                    ):
-                        session["processing"] = True
-                        session["is_speaking"] = False
+                    if not session["processing"]:
+                        should_process = False
+                        
+                        # Trigger if speaking stopped for 1.4s, AND we have at least 1s of audio
+                        if session["is_speaking"] and silence_ms >= SILENCE_DURATION_MS and buffer_duration_ms >= 1000:
+                            should_process = True
+                        # OR force trigger if buffer reaches 8 seconds to prevent indefinite waiting
+                        elif buffer_duration_ms >= 8000:
+                            should_process = True
+                            
+                        if should_process:
+                            session["processing"] = True
+                            session["is_speaking"] = False
+                            
+                            audio_data = bytes(session["audio_buffer"])
+                            session["audio_buffer"] = bytearray()
+                            session["silence_chunks"] = 0
+                            
+                            # Notify UI that AI is thinking
+                            try:
+                                await websocket.send_text(json.dumps({"event": "status", "status": "processing"}))
+                            except Exception:
+                                pass
 
-                        audio_data = bytes(session["audio_buffer"])
-                        session["audio_buffer"] = bytearray()
-                        session["silence_chunks"] = 0
-
-                        asyncio.create_task(
-                            _process_turn(websocket, session, audio_data)
-                        )
+                            asyncio.create_task(
+                                _process_turn(websocket, session, audio_data)
+                            )
 
             elif event == "stop":
                 break
@@ -115,7 +129,12 @@ async def _process_turn(websocket: WebSocket, session: dict[str, Any], audio_dat
     try:
         user_text = await _stt(audio_data)
         if not user_text:
-            session["processing"] = False
+            logger.info("STT returned empty.")
+            # Tell UI to resume listening
+            try:
+                await websocket.send_text(json.dumps({"event": "status", "status": "listening"}))
+            except Exception:
+                pass
             return
 
         session["turns"].append({"role": "user", "content": user_text, "time": datetime.utcnow().isoformat()})
@@ -128,6 +147,10 @@ async def _process_turn(websocket: WebSocket, session: dict[str, Any], audio_dat
 
     except Exception as e:
         logger.error("Browser processing error: %s", e)
+        try:
+            await websocket.send_text(json.dumps({"event": "status", "status": "listening"}))
+        except Exception:
+            pass
     finally:
         session["processing"] = False
 

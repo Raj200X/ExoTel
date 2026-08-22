@@ -1400,7 +1400,21 @@
 
             webCallSocket.onmessage = async (e) => {
                 const msg = JSON.parse(e.data);
-                if (msg.event === 'media' && msg.media && msg.media.payload) {
+                
+                if (msg.event === 'status') {
+                    if (msg.status === 'processing') {
+                        statusText.textContent = "AI Thinking...";
+                        statusText.style.color = "var(--warning)";
+                        micBtn.style.animation = "pulse-dot 0.5s infinite";
+                        micBtn.style.borderColor = "var(--warning)";
+                    } else if (msg.status === 'listening') {
+                        statusText.textContent = "Listening";
+                        statusText.style.color = "var(--success)";
+                        micBtn.style.animation = "pulse-dot 1.5s infinite";
+                        micBtn.style.borderColor = "var(--success)";
+                    }
+                }
+                else if (msg.event === 'media' && msg.media && msg.media.payload) {
                     statusText.textContent = "AI Speaking";
                     statusText.style.color = "var(--accent-primary)";
                     micBtn.style.animation = "pulse-dot 0.8s infinite";
